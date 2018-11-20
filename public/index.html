@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Plotly.js -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="./css/main.css">
+
+    <style></style>
+</head>
+
+<body>
+    <div id="container" class="container">
+        <div id="divBG" class="divBG">
+        </div>
+
+        <div id="div7" class="div7">
+            <p style="text-align: center;" id="are"></p>
+            <div id="div8" class="div8">
+                <!-- Chart will be drawn inside this DIV -->
+            </div>
+        </div>
+
+        <div id="div6" class="div6">
+            <!-- Chart will be drawn inside this DIV -->
+        </div>
+
+        <div id="div5" class="div5">
+            <!-- Chart will be drawn inside this DIV -->
+        </div>
+
+        <div id="div0" class="div0" onclick="div0(event)">
+        </div>
+
+        <div id="div1" class="div1" onclick="div1(event)">
+        </div>
+
+        <div id="div2" class="div2" onclick="div2(event)">
+        </div>
+
+        <div id="div3" class="div3" onclick="div3(event)">
+        </div>
+
+        <div id="div4" class="div4" onclick="div4(event)">
+        </div>
+    </div>
+
+    <script>
+        var count = 0;
+        var notificationSent = false;
+        var inActiveStateEntity = 0;
+        var normalStateEntity = 0;
+        var warningStateEntity = 0;
+        var criticalStateEntity = 0;
+
+        /*** Plotly.js - Stuff ***/
+        window.setInterval(loopOverDivs, 3000);
+        window.setInterval(simulateNormal, 3000);
+        window.setInterval(simulateWarning, 5000);
+        window.setInterval(simulateCritical, 10000);
+        //window.setInterval(simulateInActive, 15000);
+
+        addGlowStyle(document.getElementById("div0"));
+        addScanStyle(document.getElementById("div0"));
+
+        /******************** Core functions - start ********************/
+        function loopOverDivs() {
+            var funcName = "div" + count;
+            if (count != 0) {
+                removeGlowStyle(document.getElementById("div" + (count - 1)));
+                removeScanStyle(document.getElementById("div" + (count - 1)));
+            } else {
+                //removeStyle(document.getElementById("div0"));
+                removeGlowStyle(document.getElementById("div4"));
+                removeScanStyle(document.getElementById("div4"));
+            }
+            window[funcName](null);
+            count++;
+
+            if (count == 5) {
+                count = 0;
+            }
+            addGlowStyle(document.getElementById(funcName));
+            addScanStyle(document.getElementById(funcName));
+            plotCumulativeGraph();
+            getStatus();
+
+            function getRandomInt() {
+                var min = 1;
+                var max = 100;
+                return Math.floor(Math.random() * (max - min)) + min;
+            };
+            // set stats
+            var temp = getRandomInt();
+            document.getElementById("are").innerHTML = "Average regional energy efficiency achieved for the week: " + temp + "%";
+            if (temp > 35) {
+                document.getElementById("are").style.color = "green";
+            } else {
+                document.getElementById("are").style.color = "red";
+            }
+            plotStatGraph();
+        }
+
+        function getStatus() {
+            var xhttp = new XMLHttpRequest();
+            xhttp.open("GET", "https://dxciot.firebaseio.com/industry.json", true);
+            xhttp.setRequestHeader("Content-type", "application/json");
+            xhttp.send();
+            xhttp.onreadystatechange = function() {
+                if (xhttp.readyState == 4) {
+                    if (xhttp.status == 200) {
+                        var response = eval("(" + xhttp.responseText + ")");
+                        var status = response.industry[0].assembly_cooling_fan.status;
+                        console.log("Entity status >>> " + status);
+
+                        var div = document.getElementById("div4");
+                        if (status == false) {
+                            console.log("Setting state critical...");
+                            div.style.backgroundImage = "url('./img/icons/state-normal.png')";
+                            
+                            if(!notificationSent) {
+                                console.log("Sending notification to indicate critical state...");
+                                postStatus();
+                                notificationSent = true;
+                            }
+                        } else if (status == "true") {
+                            notificationSent = false;
+                            console.log("Setting state normal...");
+                            div.style.backgroundImage = "url('./img/icons/state-critical.png')";
+                        }
+                    }
+                }
+            };
+        }
+
+        function postStatus() {
+            var xhttp = new XMLHttpRequest();
+            xhttp.open("POST", "https://fcm.googleapis.com/fcm/send", true);
+            xhttp.setRequestHeader("content-type", "application/json");
+            xhttp.setRequestHeader("authorization", "key=AAAAWV8kCf4:APA91bGHFYX6FEacTF50jZxXCDs4i6GBRj5Ot36GfzcMahO_sxD56sO7O1o43eICUk8L-HmjBNOCL5A6EY9tSI-PfeyttWTIHNp6x0yOsiiKIWxEDZXsttN26HAr_L-mlxhc_Dv6x3oB");
+            var data = JSON.stringify({
+                "to": "c5VmSN3rtgY:APA91bG_qvI7tuRmQ-IB3CpqmhWA54-lPTbt2ZQf7-nokTrIDvM7KWpKQYHPfWKnAGS2bTkhd-B1NM7lS3ugr1AoDx-Mxj4daonAPXHierR17E-lmr-3xyM99G3QU55Ji63r1Jqhr4hb",
+                "notification": {
+                    "body": "Berlin down!",
+                    "title": "Alert",
+                    "content_available": true,
+                    "priority": "high",
+                },
+                "data": {
+                    "body": "Berlin down!",
+                    "title": "Alert",
+                    "content_available": true,
+                    "priority": "high"
+                }
+            });
+            xhttp.send(data);
+        }
+
+        function div0(event) {
+            //console.log("Div 0");
+            plotIndividualGraph();
+        }
+
+        function div1(event) {
+            //console.log("Div 1");
+            plotIndividualGraph();
+        }
+
+        function div2(event) {
+            //console.log("Div 2");
+            plotIndividualGraph();
+        }
+
+        function div3(event) {
+            //console.log("Div 3");
+            plotIndividualGraph();
+        }
+
+        function div4(event) {
+            //console.log("Div 4");
+            plotIndividualGraph();
+        }
+        /******************** Core functions - end ********************/
+
+        /******************** Simulation functions - start ********************/
+        function simulateNormal() {
+            normalStateEntity = getRandomInt();
+            if (normalStateEntity == 0) return;
+            var div = document.getElementById("div" + normalStateEntity);
+            div.style.backgroundImage = "url('./img/icons/state-normal.png')";
+        }
+
+        function simulateWarning() {
+            warningStateEntity = getRandomInt();
+            if (warningStateEntity == 0) return;
+            var div = document.getElementById("div" + warningStateEntity);
+            div.style.backgroundImage = "url('./img/icons/state-warning.png')";
+        }
+
+        function simulateCritical() {
+            criticalStateEntity = getRandomInt();
+            if (criticalStateEntity == 0) return;
+            var div = document.getElementById("div" + criticalStateEntity);
+            div.style.backgroundImage = "url('./img/icons/state-critical.png')";
+        }
+
+        function simulateInActive() {
+            inActiveStateEntity = getRandomInt();
+            if (inActiveStateEntity == 0) return;
+            var div = document.getElementById("div" + inActiveStateEntity);
+            div.style.backgroundImage = "url('./img/icons/state-inactive.png')";
+        }
+        /******************** Simulation functions - end ********************/
+
+        /******************** Graph plotting - start ********************/
+        function plotStatGraph() {
+            var randoms = randomArray(7);
+            var trace1 = {
+                x: days(),
+                y: randoms,
+                name: 'Overall utilization',
+                type: 'bar'
+            };
+            randoms = randomArray(7);
+            var trace2 = {
+                x: days(),
+                y: randoms,
+                name: 'Weekly utilization',
+                type: 'bar'
+            };
+            var data = [trace1, trace2];
+            var layout = {
+                title: 'Statistics',
+                autosize: false,
+                width: 500,
+                height: 150,
+                xaxis: {},
+                yaxis: {
+                    title: 'kWh',
+                },
+                margin: {
+                    l: 50,
+                    r: 40,
+                    b: 20,
+                    t: 40,
+                    pad: 5
+                },
+                barmode: 'group'
+            };
+            Plotly.newPlot('div8', data, layout);
+        }
+
+        function plotCumulativeGraph() {
+            var randoms = randomArray(7);
+            var data = [{
+                x: days(),
+                y: randoms,
+                type: 'bar'
+            }];
+            var layout = {
+                title: 'Energy consumption for Germany',
+                autosize: false,
+                width: 500,
+                height: 200,
+                xaxis: {},
+                yaxis: {
+                    title: 'kWh',
+                },
+                margin: {
+                    l: 50,
+                    r: 40,
+                    b: 40,
+                    t: 80,
+                    pad: 10
+                }
+            };
+            //console.log("randoms: " + randoms);
+            Plotly.newPlot('div5', data, layout);
+        }
+
+        function plotIndividualGraph() {
+            var randoms = randomArray(7);
+            var data = [{
+                x: days(),
+                y: randoms,
+                type: 'bar'
+            }];
+            var layout = {
+                title: 'Energy consumption for region: ' + regions()[count],
+                autosize: false,
+                width: 500,
+                height: 200,
+                xaxis: {},
+                yaxis: {
+                    title: 'kWh',
+                },
+                margin: {
+                    l: 50,
+                    r: 40,
+                    b: 40,
+                    t: 80,
+                    pad: 10
+                }
+            };
+            //console.log("randoms: " + randoms);
+            Plotly.newPlot('div6', data, layout);
+        }
+        /******************** Graph plotting - end ********************/
+
+        /******************** Utility functions - start ********************/
+        function days() {
+            var array = new Array(7);
+            array[0] = "Sun";
+            array[1] = "Mon";
+            array[2] = "Tue";
+            array[3] = "Wed";
+            array[4] = "Thu";
+            array[5] = "Fri";
+            array[6] = "Sat";
+            return array;
+        }
+
+        function regions() {
+            var array = new Array(7);
+            array[0] = "Nordrheim-Westfalen";
+            array[1] = "Rheinland-Pfalz";
+            array[2] = "Hamburg";
+            array[3] = "Bayern";
+            array[4] = "Berlin";
+            return array;
+        }
+
+        function randomArray(length) {
+            var min = 1;
+            var max = 100;
+            return Array.apply(null, Array(length)).map(function() {
+                return Math.round(Math.random() * (max - min) + min);
+            });
+        }
+
+        function getRandomInt() {
+            var min = 1;
+            var max = 5;
+            return Math.floor(Math.random() * (max - min)) + min;
+        };
+
+        function addGlowStyle(element) {
+            element.classList.add("glow");
+        };
+
+        function removeGlowStyle(element) {
+            element.classList.remove("glow");
+        };
+
+        function addScanStyle(element) {
+            element.classList.add("scanning");
+        };
+
+        function removeScanStyle(element) {
+            element.classList.remove("scanning");
+        };
+        /******************** Utility functions - end ********************/
+    </script>
+</body>
+
+</html>
